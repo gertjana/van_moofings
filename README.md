@@ -1,21 +1,13 @@
 # VanMoofing
 
-**TODO: Add description**
+Trend calculation for the number of Km cycled on my Van Moof bike
 
-## Installation
+# building
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `van_moofing` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:van_moofing, "~> 0.1.0"}
-  ]
-end
+This is a command line application
+build using
 ```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/van_moofing](https://hexdocs.pm/van_moofing).
+mix escript.build
+```
+then run the executable to get an overview of the supported arguments
 

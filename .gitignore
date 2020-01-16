@@ -22,3 +22,10 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 van_moofing-*.tar
 
+.elixir_ls/
+
+van_moofing
+
+.formatter.exs
+
+
