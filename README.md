@@ -1,4 +1,4 @@
-# VanMoofing
+# VanMoofings
 
 Trend calculation for the number of Km cycled on my Van Moof bike
 
