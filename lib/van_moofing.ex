@@ -80,10 +80,10 @@ defmodule VanMoofing do
   end
 
   defp loop(acc, _, []), do: acc
-  defp loop(acc, nil, [h | t]), do: loop(acc, h, t)
-  defp loop(acc, {prev_date, prev_value}, [{date, value} | t]) do
+  defp loop(acc, nil, [head| tail]), do: loop(acc, head, tail)
+  defp loop(acc, {prev_date, prev_value}, [{date, value} | tail]) do
     diff = diff_integer(prev_value, value) / diff_string_date(prev_date, date)
-    loop([diff | acc], {date, value}, t)
+    loop([diff | acc], {date, value}, tail)
   end
 
   defp year(date), do: Date.from_iso8601!(date).year |> Integer.to_string
