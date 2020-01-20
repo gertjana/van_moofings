@@ -22,7 +22,8 @@ defmodule VanMoofing.MixProject do
   defp deps do
     [
       {:ex_cli, "~> 0.1.0"},
-      {:poison, "~> 3.1"}
+      {:poison, "~> 3.1"},
+      {:number, "~> 1.0.1"}
     ]
   end
 end

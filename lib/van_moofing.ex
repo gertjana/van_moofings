@@ -1,4 +1,5 @@
 defmodule VanMoofing do
+  use Number
   @store "~/.vanmoofing.json"
   @ets_store :van_moofings
 
@@ -6,6 +7,7 @@ defmodule VanMoofing do
 		:ets.new(@ets_store, [:set, :public, :named_table])
 
     if !File.exists?(Path.expand(@store)), do: File.write(Path.expand(@store), "{}")
+
 		with {:ok, body} <- File.read(Path.expand(@store)),
          {:ok, moofings} <- Poison.decode(body) do
            years = Map.keys(moofings)
@@ -17,24 +19,18 @@ defmodule VanMoofing do
 
   # @spec get(String.t()) :: Nil | {String.t(), Integer}
   def get(date) do
-    case list(year(date)) |> Enum.filter(fn {k, _v} -> k == date end) do
-      [h, _t] -> h
+    case list(year(date)) |> Enum.filter(fn {d, _km} -> d == date end) do
+      [head, _] -> head
       _ -> nil
     end
   end
-
-  # @spec list_all :: [VanMoofing]
-  # def list_all() do
-  #   :ets.lookup(@ets_store, :moofings)[:moofings]
-  #     |> Enum.sort(fn(x, y) -> x.date < y.date end)
-  # end
 
   @spec list(String.t()) :: [{String.t, Integer}]
   def list(year) do
     y = String.to_atom(year)
     :ets.lookup(@ets_store, y)[y]
-    |> Enum.map(fn {date, value} -> {date, value} end)
-    |> List.keysort(0)
+      |> Enum.map(fn {date, value} -> {date, value} end)
+      |> List.keysort(0)
   end
 
   @spec save(String.t(), String.t(), String.t()) :: :ok | {:error, atom}
@@ -66,7 +62,7 @@ defmodule VanMoofing do
 
   @spec trend([{String.t(), Integer}], String.t) :: float
   def trend(moofings, new_date) do
-    {last_date, _last_value} = List.last(moofings)
+    {last_date, last_value} = List.last(moofings)
     [h | t] = moofings
     acc = loop([],h, t)
     case acc do
@@ -74,8 +70,8 @@ defmodule VanMoofing do
       _ ->
         avg = Enum.sum(acc) / Enum.count(acc)
         days = diff_string_date(last_date, new_date)
-        IO.puts "With a average of #{avg} km a day and #{days} days till the end of the year...."
-        avg * days
+        IO.puts "With a average of #{Number.Delimit.number_to_delimited(avg)} km a day and #{days} days till the end of the year...."
+        avg * days + last_value
     end
   end
 
