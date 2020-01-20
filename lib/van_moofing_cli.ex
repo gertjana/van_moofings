@@ -58,8 +58,8 @@ defmodule VanMoofing.CLI do
     description "[year] Predicts the neumber of Kilometers cycled in a year"
     run context do
       year = context[:year]
-      trend = VanMoofing.trend_eoy(year) |> Float.floor
-      IO.puts "Predicted km at the end of #{year} is : #{trend} km"
+      {total, this_year} = VanMoofing.trend_eoy(year)
+      IO.puts "Predicted km at the end of #{year} is : #{this_year} km for a grand total of #{total} km"
     end
   end
 

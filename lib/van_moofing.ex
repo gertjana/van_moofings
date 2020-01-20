@@ -55,12 +55,12 @@ defmodule VanMoofing do
     end
   end
 
-  @spec trend_eoy(String.t()) :: float
+  @spec trend_eoy(String.t()) :: {float, float}
   def trend_eoy(year) do
     trend(list(year), "#{year}-12-31")
   end
 
-  @spec trend([{String.t(), Integer}], String.t) :: float
+  @spec trend([{String.t(), Integer}], String.t) :: {float, float}
   def trend(moofings, new_date) do
     {last_date, last_value} = List.last(moofings)
     [h | t] = moofings
@@ -71,7 +71,7 @@ defmodule VanMoofing do
         avg = Enum.sum(acc) / Enum.count(acc)
         days = diff_string_date(last_date, new_date)
         IO.puts "With a average of #{Number.Delimit.number_to_delimited(avg)} km a day and #{days} days till the end of the year...."
-        avg * days + last_value
+       {Float.round(avg * days + last_value), Float.round(avg * days + last_value - elem(h, 1))}
     end
   end
 
