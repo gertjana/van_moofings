@@ -59,7 +59,7 @@ defmodule VanMoofing.CLI do
     run context do
       year = context[:year]
       {total, this_year} = VanMoofing.trend_eoy(year)
-      IO.puts "Predicted km at the end of #{year} is : #{this_year} km for a grand total of #{total} km"
+      IO.puts "At this rate this #{year} you will probably cycle : #{this_year} km for a grand total of #{total} km"
     end
   end
 
