@@ -58,8 +58,9 @@ defmodule VanMoofing.CLI do
     description "[year] Predicts the neumber of Kilometers cycled in a year"
     run context do
       year = context[:year]
-      {total, this_year} = VanMoofing.trend_eoy(year)
-      IO.puts "At this rate this #{year} you will probably cycle : #{this_year} km for a grand total of #{total} km"
+      {avg, days, total, this_year} = VanMoofing.trend_eoy(year)
+      IO.puts "With a average of #{Number.Delimit.number_to_delimited(avg)} km a day and #{days} days till the end of the year, "
+      IO.puts "you will probably cycle : #{this_year} km in #{year} for a grand total of #{total} km"
     end
   end
 
@@ -70,10 +71,13 @@ defmodule VanMoofing.CLI do
     description "[year] exports the list of kilometers cycled in a year"
     run context do
       year = context[:year]
-      IO.puts "\"date\",\"km\""
+      IO.puts "\"date\", \"km\", \"trend\""
       VanMoofing.list(year)
-        |> Enum.each(fn {k, v} -> IO.puts("\"#{k}\", #{v}") end)
+        |> Enum.each(fn {k, v} -> IO.puts("\"#{k}\", #{v}, #{v}") end)
+      {_, _, total, _} = VanMoofing.trend_eoy(year)
+      IO.puts("\"#{year}-12-31\", , #{total}")
     end
+
   end
 
   defp get_date(), do: Date.utc_today |> Date.to_iso8601
