@@ -10,8 +10,11 @@ defmodule VanMoofing do
 
 		with {:ok, body} <- File.read(Path.expand(@store)),
          {:ok, moofings} <- Poison.decode(body) do
-           years = Map.keys(moofings)
-           Enum.each(years, fn year -> :ets.insert(@ets_store, {String.to_atom(year), Map.get(moofings, year)}) end)
+           goal = moofings["goal"]
+           data = moofings["data"]
+           years = Map.keys(data)
+           :ets.insert(@ets_store, {:goal, goal})
+           Enum.each(years, fn year -> :ets.insert(@ets_store, {String.to_atom(year), Map.get(data, year)}) end)
            :ets.insert(@ets_store, {:years, years})
          end
     {:ok, self()}
@@ -36,10 +39,12 @@ defmodule VanMoofing do
   @spec save(String.t(), String.t(), String.t()) :: :ok | {:error, atom}
   def save(date, value, year) do
     new_map = Enum.into(list(year), %{})
-    moofings = :ets.lookup(@ets_store, :years)[:years]
+    data = :ets.lookup(@ets_store, :years)[:years]
                |> Enum.map(fn y when y == year -> {y, Map.put(new_map, date, value)}
                               y  -> {y, list(y) |> Enum.into(%{})} end)
                |> Enum.into(%{})
+    goal = :ets.lookup(@ets_store, :goal)[:goal]
+    moofings = %{"goal" => goal, "data" => data}
     {:ok, json} = Poison.encode(moofings, pretty: true)
     File.write(Path.expand(@store), json)
   end
@@ -55,13 +60,14 @@ defmodule VanMoofing do
     end
   end
 
-  @spec trend_eoy(String.t()) :: {float, integer, float, float}
+  @spec trend_eoy(String.t()) :: {float, integer, float, float,float, float}
   def trend_eoy(year) do
     trend(list(year), "#{year}-12-31")
   end
 
-  @spec trend([{String.t(), Integer}], String.t) :: {float, integer, float, float}
+  @spec trend([{String.t(), Integer}], String.t) :: {float, integer, float, float, float, float}
   def trend(moofings, new_date) do
+    goal = :ets.lookup(@ets_store, :goal)[:goal]
     {last_date, last_value} = List.last(moofings)
     [h | t] = moofings
     acc = loop([],h, t)
@@ -70,7 +76,8 @@ defmodule VanMoofing do
       _ ->
         avg = Enum.sum(acc) / Enum.count(acc)
         days = diff_string_date(last_date, new_date)
-        {avg, days, Float.round(avg * days + last_value), Float.round(avg * days + last_value - elem(h, 1))}
+        avg_goal = (goal - last_value) / days
+        {avg, days, Float.round(avg * days + last_value), Float.round(avg * days + last_value - elem(h, 1)), goal, avg_goal}
     end
   end
 
@@ -86,3 +93,4 @@ defmodule VanMoofing do
   defp diff_string_date(d1, d2), do: Date.diff(Date.from_iso8601!(d2), Date.from_iso8601!(d1))
   defp diff_integer(v1,v2), do: v2-v1
 end
+

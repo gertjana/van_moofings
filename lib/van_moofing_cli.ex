@@ -19,7 +19,7 @@ defmodule VanMoofing.CLI do
       IO.puts "\"date\", \"km\", \"trend\""
       VanMoofing.list(year)
         |> Enum.each(fn {k, v} -> IO.puts("\"#{k}\", #{v}, #{v}") end)
-      {_, _, total, _} = VanMoofing.trend_eoy(year)
+      {_, _, total, _, _, _} = VanMoofing.trend_eoy(year)
       IO.puts("\"#{year}-12-31\", , #{total}")
     end
   end
@@ -33,9 +33,10 @@ defmodule VanMoofing.CLI do
 
     run context do
       year = context[:year]
-      {avg, days, total, this_year} = VanMoofing.trend_eoy(year)
+      {avg, days, total, this_year, goal, avg_goal} = VanMoofing.trend_eoy(year)
       IO.puts "With a average of #{Number.Delimit.number_to_delimited(avg)} km a day and #{days} days till the end of the year, "
       IO.puts "you will probably cycle : #{this_year} km in #{year} for a grand total of #{total} km"
+      IO.puts "To reach your goal of #{goal} km you'll need to cycle #{Number.Delimit.number_to_delimited(avg_goal)} km a day"
     end
   end
 
