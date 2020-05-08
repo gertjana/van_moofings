@@ -49,6 +49,16 @@ defmodule VanMoofing do
     File.write(Path.expand(@store), json)
   end
 
+  @spec save_goal(Integer) :: :ok | {:error, atom}
+  def save_goal(goal) do
+    data = :ets.lookup(@ets_store, :years)[:years]
+               |> Enum.map(fn y  -> {y, list(y) |> Enum.into(%{})} end)
+               |> Enum.into(%{})
+    moofings = %{"goal" => goal, "data" => data}
+    {:ok, json} = Poison.encode(moofings, pretty: true)
+    File.write(Path.expand(@store), json)
+  end
+
   @spec add(String.t(), Integer) :: String.t()
   def add(date, km) do
     case get(date) do
@@ -65,7 +75,7 @@ defmodule VanMoofing do
     trend(list(year), "#{year}-12-31")
   end
 
-  @spec trend([{String.t(), Integer}], String.t) :: {float, integer, float, float, float, float}
+  @spec trend([{String.t, Integer}], String.t) :: {float, integer, float, float, float, float}
   def trend(moofings, new_date) do
     goal = :ets.lookup(@ets_store, :goal)[:goal]
     {last_date, last_value} = List.last(moofings)

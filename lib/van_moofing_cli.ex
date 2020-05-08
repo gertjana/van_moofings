@@ -36,7 +36,10 @@ defmodule VanMoofing.CLI do
       {avg, days, total, this_year, goal, avg_goal} = VanMoofing.trend_eoy(year)
       IO.puts "With a average of #{Number.Delimit.number_to_delimited(avg)} km a day and #{days} days till the end of the year, "
       IO.puts "you will probably cycle : #{this_year} km in #{year} for a grand total of #{total} km"
-      IO.puts "To reach your goal of #{goal} km you'll need to cycle #{Number.Delimit.number_to_delimited(avg_goal)} km a day"
+      case {total, goal} do
+        {t, g} when t >= g -> IO.puts "You have reached your #{goal} km goal! Well done!"
+        _ -> IO.puts "To reach your goal of #{goal} km you'll need to cycle an averagee of #{Number.Delimit.number_to_delimited(avg_goal)} km a day"\
+      end
     end
   end
 
@@ -76,6 +79,18 @@ defmodule VanMoofing.CLI do
       VanMoofing.add(get_date(), context[:km])
     end
   end
+
+  command :goal do
+    aliases [:g]
+    description "Alias: g\t\targs: [goal] \t\tSets a goal, only applies to the current year"
+
+    argument :goal, type: :integer, help: "The goal you want to reach at the end of the year"
+
+    run context do
+      VanMoofing.save_goal(context[:goal])
+    end
+  end
+
 
   defp get_date(), do: Date.utc_today |> Date.to_iso8601
 
