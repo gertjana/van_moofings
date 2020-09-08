@@ -1,106 +1,127 @@
 defmodule VanMoofing do
   use Number
+
   @store "~/.vanmoofing.json"
   @ets_store :van_moofings
+  @model %Model.Bikes{bikes: [%Model.Bike{data: [%Model.Measurement{}]}]}
 
   def start(_type, _args) do
 		:ets.new(@ets_store, [:set, :public, :named_table])
 
     if !File.exists?(Path.expand(@store)), do: File.write(Path.expand(@store), "{}")
 
-		with {:ok, body} <- File.read(Path.expand(@store)),
-         {:ok, moofings} <- Poison.decode(body) do
-           goal = moofings["goal"]
-           data = moofings["data"]
-           years = Map.keys(data)
-           :ets.insert(@ets_store, {:goal, goal})
-           Enum.each(years, fn year -> :ets.insert(@ets_store, {String.to_atom(year), Map.get(data, year)}) end)
-           :ets.insert(@ets_store, {:years, years})
-         end
+    case load_from_file(@store) do
+      {:ok, moofings} -> :ets.insert(@ets_store, {:moofings, moofings})
+      {:error, err} -> IO.puts inspect(err)
+    end
     {:ok, self()}
   end
 
-  # @spec get(String.t()) :: Nil | {String.t(), Integer}
-  def get(date) do
-    case list(year(date)) |> Enum.filter(fn {d, _km} -> d == date end) do
-      [head, _] -> head
-      _ -> nil
+  @spec load_from_file(binary) :: {:error, atom} | {:ok, map}
+  def load_from_file(file) do
+    with {:ok, body} <- File.read(Path.expand(file)),
+         {:ok, moofings} <- Poison.decode(body, as: @model) do
+      {:ok, moofings}
+    else
+      err -> err
     end
   end
 
-  @spec list(String.t()) :: [{String.t, Integer}]
+  @spec get_current_bike(%Model.Bikes{}) :: %Model.Bike{}
+  def get_current_bike(moofings) do
+    Lens.key(:bikes)
+      |> Lens.all()
+      |> Lens.filter(fn b -> b.current==true end)
+      |> Lens.to_list(moofings)
+      |> List.first()
+  end
+
+  @spec filter_measurements_per_year(String.t, %Model.Bikes{}) :: [%Model.Measurement{}]
+  def filter_measurements_per_year(year, moofings) do
+    get_current_bike(moofings).data
+      |> Enum.filter(fn measurement -> measurement.date |> String.starts_with?(year) end)
+  end
+
+  @spec list(String.t) :: [{String.t, integer}]
   def list(year) do
-    y = String.to_atom(year)
-    :ets.lookup(@ets_store, y)[y]
-      |> Enum.map(fn {date, value} -> {date, value} end)
-      |> List.keysort(0)
+    moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
+    filter_measurements_per_year(year, moofings)
+      |> Enum.map(fn m -> {m.date, m.km} end)
   end
 
-  @spec save(String.t(), String.t(), String.t()) :: :ok | {:error, atom}
-  def save(date, value, year) do
-    new_map = Enum.into(list(year), %{})
-    data = :ets.lookup(@ets_store, :years)[:years]
-               |> Enum.map(fn y when y == year -> {y, Map.put(new_map, date, value)}
-                              y  -> {y, list(y) |> Enum.into(%{})} end)
-               |> Enum.into(%{})
-    goal = :ets.lookup(@ets_store, :goal)[:goal]
-    moofings = %{"goal" => goal, "data" => data}
+  @spec add_value([%Model.Measurement{}], binary, integer) :: [%Model.Measurement{}]
+  def add_value(moofings, date, value) do
+    Lens.key(:bikes)
+      |> Lens.all()
+      |> Lens.filter(fn b -> b.current==true end)
+      |> Lens.key(:data)
+      |> Lens.map(moofings, fn d -> [%Model.Measurement{date: date, km: value} | d] end)
+  end
+
+  @spec add(binary, integer) :: :ok | {:error, atom}
+  def add(date, value) do
+    moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
+    updated = add_value(moofings, date, value)
+    save_to_file(updated)
+  end
+
+  defp save_to_file(moofings) do
     {:ok, json} = Poison.encode(moofings, pretty: true)
     File.write(Path.expand(@store), json)
   end
 
-  @spec save_goal(Integer) :: :ok | {:error, atom}
   def save_goal(goal) do
-    data = :ets.lookup(@ets_store, :years)[:years]
-               |> Enum.map(fn y  -> {y, list(y) |> Enum.into(%{})} end)
-               |> Enum.into(%{})
-    moofings = %{"goal" => goal, "data" => data}
-    {:ok, json} = Poison.encode(moofings, pretty: true)
-    File.write(Path.expand(@store), json)
+    moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
+    updated = Lens.key(:goal) |> Lens.map(moofings, fn _ -> goal end)
+    save_to_file(updated)
   end
 
-  @spec add(String.t(), Integer) :: String.t()
-  def add(date, km) do
-    case get(date) do
-      nil ->
-        save(date, km, year(date))
-        "added #{km} for #{date}"
-      _ ->
-        "Entry for #{date} already exists"
+  def get_total_other_bikes(moofings) do
+    Lens.key(:bikes)
+      |> Lens.all()
+      |> Lens.filter(fn b -> b.current==false end)
+      |> Lens.key(:data)
+      |> Lens.to_list(moofings)
+      |> Enum.map(fn [h|_] -> h.km end)
+      |> Enum.sum
     end
-  end
 
-  @spec trend_eoy(String.t()) :: {float, integer, float, float,float, float}
+
+  @doc """
+    Linear trend analysis by calculating the average of all deltas of the measurements in an year
+    and then extrapolate for the last day of the year
+  """
+  @spec trend_eoy(String.t) :: {float, integer, float, float,float, float}
   def trend_eoy(year) do
-    trend(list(year), "#{year}-12-31")
+    moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
+    offset = get_total_other_bikes(moofings)
+    trend(list(year), "#{year}-12-31", moofings.goal, offset)
   end
 
-  @spec trend([{String.t, Integer}], String.t) :: {float, integer, float, float, float, float}
-  def trend(moofings, new_date) do
-    goal = :ets.lookup(@ets_store, :goal)[:goal]
+  @spec trend([{String.t, integer}], String.t, integer, integer) :: {float, integer, float, float, float, float}
+  defp trend(moofings, new_date, goal, offset) do
     {last_date, last_value} = List.last(moofings)
     [h | t] = moofings
-    acc = loop([],h, t)
+    acc = linear_interpolate([],h, t)
     case acc do
       [] -> 0
       _ ->
         avg = Enum.sum(acc) / Enum.count(acc)
         days = diff_string_date(last_date, new_date)
         avg_goal = (goal - last_value) / days
-        {avg, days, Float.round(avg * days + last_value), Float.round(avg * days + last_value - elem(h, 1)), goal, avg_goal}
+        total = Float.round(avg * days + last_value)+offset
+        this_year = Float.round(avg * days + last_value - elem(h, 1))
+        {avg, days, total, this_year, goal, avg_goal}
     end
   end
 
-  defp loop(acc, _, []), do: acc
-  defp loop(acc, nil, [head| tail]), do: loop(acc, head, tail)
-  defp loop(acc, {prev_date, prev_value}, [{date, value} | tail]) do
+  defp linear_interpolate(acc, _, []), do: acc
+  defp linear_interpolate(acc, nil, [head| tail]), do: linear_interpolate(acc, head, tail)
+  defp linear_interpolate(acc, {prev_date, prev_value}, [{date, value} | tail]) do
     diff = diff_integer(prev_value, value) / diff_string_date(prev_date, date)
-    loop([diff | acc], {date, value}, tail)
+    linear_interpolate([diff | acc], {date, value}, tail)
   end
-
-  defp year(date), do: Date.from_iso8601!(date).year |> Integer.to_string
 
   defp diff_string_date(d1, d2), do: Date.diff(Date.from_iso8601!(d2), Date.from_iso8601!(d1))
   defp diff_integer(v1,v2), do: v2-v1
 end
-

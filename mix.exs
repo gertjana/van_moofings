@@ -23,7 +23,9 @@ defmodule VanMoofing.MixProject do
     [
       {:ex_cli, "~> 0.1.0"},
       {:poison, "~> 3.1"},
-      {:number, "~> 1.0.1"}
+      {:number, "~> 1.0.1"},
+      {:typed_struct, "~> 0.2.1"},
+      {:lens, "~> 1.0.0"}
     ]
   end
 end

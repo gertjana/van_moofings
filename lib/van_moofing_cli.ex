@@ -37,7 +37,7 @@ defmodule VanMoofing.CLI do
       IO.puts "With a average of #{Number.Delimit.number_to_delimited(avg)} km a day and #{days} days till the end of the year, "
       IO.puts "you will probably cycle : #{this_year} km in #{year} for a grand total of #{total} km"
       case {total, goal} do
-        {t, g} when t >= g -> IO.puts "You have reached your #{goal} km goal! Well done!"
+        {t, g} when t >= g -> IO.puts "You will reach your #{goal} km goal! Well done!"
         _ -> IO.puts "To reach your goal of #{goal} km you'll need to cycle an averagee of #{Number.Delimit.number_to_delimited(avg_goal)} km a day"\
       end
     end
