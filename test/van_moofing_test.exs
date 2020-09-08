@@ -3,7 +3,7 @@ defmodule VanMoofingTest do
   doctest VanMoofing
 
   @store "./test/test.json"
-\
+
   setup_all do
     {:ok, moofings} = VanMoofing.load_from_file(@store)
     {:ok, moofings: moofings}
@@ -19,10 +19,6 @@ defmodule VanMoofingTest do
     assert current_bike.name == "coronita"
   end
 
-  test "list values for current bike", _state do
-    assert true
-  end
-
   test "add a value for current bike", state do
     date = "2020-09-07"
     value = 320
@@ -35,7 +31,7 @@ defmodule VanMoofingTest do
   end
 
   test "calculate trend", _state do
-    assert true
+    assert "TODO" == "TODO"
   end
 
   test "calculate total for other bikes", state do
