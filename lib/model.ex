@@ -27,5 +27,4 @@ defmodule Model do
       field :km, integer()
     end
   end
-
 end

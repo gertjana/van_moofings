@@ -17,7 +17,7 @@ defmodule VanMoofing do
     {:ok, self()}
   end
 
-  @spec load_from_file(binary) :: {:error, atom} | {:ok, map}
+  @spec load_from_file(binary) :: {:error, atom} | {:ok, %Model.Bikes{}}
   def load_from_file(file) do
     with {:ok, body} <- File.read(Path.expand(file)),
          {:ok, moofings} <- Poison.decode(body, as: @model) do
@@ -25,6 +25,11 @@ defmodule VanMoofing do
     else
       err -> err
     end
+  end
+
+  defp save_to_file(moofings) do
+    {:ok, json} = Poison.encode(moofings, pretty: true)
+    File.write(Path.expand(@store), json)
   end
 
   @spec get_current_bike(%Model.Bikes{}) :: %Model.Bike{}
@@ -65,11 +70,7 @@ defmodule VanMoofing do
       |> save_to_file
   end
 
-  defp save_to_file(moofings) do
-    {:ok, json} = Poison.encode(moofings, pretty: true)
-    File.write(Path.expand(@store), json)
-  end
-
+  @spec save_goal(integer) :: :ok | {:error, atom}
   def save_goal(goal) do
     moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
     Lens.key(:goal)
@@ -77,7 +78,7 @@ defmodule VanMoofing do
       |> save_to_file
   end
 
-  @spec get_total_other_bikes(any) :: number
+  @spec get_total_other_bikes( %Model.Bikes{}) :: integer
   def get_total_other_bikes(moofings) do
     Lens.key(:bikes)
       |> Lens.all()
@@ -96,6 +97,7 @@ defmodule VanMoofing do
       |> length() > 0
   end
 
+  @spec set_current_bike(String.t) :: :ok | {:error, atom}
   def set_current_bike(bike_name) do
     moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
     case bike_exists?(moofings, bike_name) do
@@ -106,12 +108,14 @@ defmodule VanMoofing do
       |> save_to_file
   end
 
+  @spec add_new_bike(%Model.Bikes{}, String.t) :: %Model.Bikes{}
   def add_new_bike(moofings, bike_name) do
     Lens.key(:bikes)
       |> Lens.front
       |> Lens.map(moofings, fn nil -> %Model.Bike{name: bike_name, data: []} end)
   end
 
+  @spec update_current_bike(%Model.Bikes{}, String.t) :: %Model.Bikes{}
   def update_current_bike(moofings, bike_name) do
     Lens.key(:bikes)
       |> Lens.all()
