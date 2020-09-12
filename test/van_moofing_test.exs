@@ -40,7 +40,9 @@ defmodule VanMoofingTest do
   end
 
   test "set current bike", state do
-    updated = VanMoofing.update_current_bike(state[:moofings], "ffs_horse")
+    moofings = state[:moofings]
+    assert "coronita" = VanMoofing.get_current_bike(moofings).name
+    updated = VanMoofing.update_current_bike(moofings, "ffs_horse")
     assert "ffs_horse" = VanMoofing.get_current_bike(updated).name
   end
 

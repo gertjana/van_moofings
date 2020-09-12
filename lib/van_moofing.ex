@@ -103,16 +103,13 @@ defmodule VanMoofing do
       true -> moofings
     end
       |> update_current_bike(bike_name)
-      |> inspect
-      |> IO.puts
-    # |> save_to_file
+      |> save_to_file
   end
 
   def add_new_bike(moofings, bike_name) do
     Lens.key(:bikes)
       |> Lens.front
       |> Lens.map(moofings, fn nil -> %Model.Bike{name: bike_name, data: []} end)
-    # %{moofings | bikes: [ %Model.Bike{name: bike_name, data: []} | moofings.bikes]}
   end
 
   def update_current_bike(moofings, bike_name) do
@@ -150,7 +147,6 @@ defmodule VanMoofing do
   end
 
   defp linear_interpolate(acc, _, []), do: acc
-  # defp linear_interpolate(acc, nil, [head | tail]), do: linear_interpolate(acc, head, tail)
   defp linear_interpolate(acc, {prev_date, prev_value}, [{date, value} | tail]) do
     diff = diff_integer(prev_value, value) / diff_string_date(prev_date, date)
     linear_interpolate([diff | acc], {date, value}, tail)
