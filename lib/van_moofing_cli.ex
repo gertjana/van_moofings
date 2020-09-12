@@ -91,6 +91,16 @@ defmodule VanMoofing.CLI do
     end
   end
 
+  command :current do
+    aliases [:c]
+    description "Alias: [c]\t\targs: [bike_name] \t\tSet's the current bike if it doesn't exist will create it"
+
+    argument :bike_name, type: :string, help: "The name you gave that bike"
+
+    run context do
+      VanMoofing.set_current_bike(context[:bike_name])
+    end
+  end
 
   defp get_date(), do: Date.utc_today |> Date.to_iso8601
 

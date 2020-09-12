@@ -61,8 +61,8 @@ defmodule VanMoofing do
   @spec add(binary, integer) :: :ok | {:error, atom}
   def add(date, value) do
     moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
-    updated = add_value(moofings, date, value)
-    save_to_file(updated)
+    add_value(moofings, date, value)
+      |> save_to_file
   end
 
   defp save_to_file(moofings) do
@@ -72,10 +72,12 @@ defmodule VanMoofing do
 
   def save_goal(goal) do
     moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
-    updated = Lens.key(:goal) |> Lens.map(moofings, fn _ -> goal end)
-    save_to_file(updated)
+    Lens.key(:goal)
+      |> Lens.map(moofings, fn _ -> goal end)
+      |> save_to_file
   end
 
+  @spec get_total_other_bikes(any) :: number
   def get_total_other_bikes(moofings) do
     Lens.key(:bikes)
       |> Lens.all()
@@ -84,8 +86,40 @@ defmodule VanMoofing do
       |> Lens.to_list(moofings)
       |> Enum.map(fn [h|_] -> h.km end)
       |> Enum.sum
-    end
+  end
 
+  defp bike_exists?(moofings, bike_name) do
+    Lens.key(:bikes)
+      |> Lens.all
+      |> Lens.filter(fn b -> b.name == bike_name end)
+      |> Lens.to_list(moofings)
+      |> length() > 0
+  end
+
+  def set_current_bike(bike_name) do
+    moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
+    case bike_exists?(moofings, bike_name) do
+      false -> add_new_bike(moofings, bike_name)
+      true -> moofings
+    end
+      |> update_current_bike(bike_name)
+      |> inspect
+      |> IO.puts
+    # |> save_to_file
+  end
+
+  def add_new_bike(moofings, bike_name) do
+    Lens.key(:bikes)
+      |> Lens.front
+      |> Lens.map(moofings, fn nil -> %Model.Bike{name: bike_name, data: []} end)
+    # %{moofings | bikes: [ %Model.Bike{name: bike_name, data: []} | moofings.bikes]}
+  end
+
+  def update_current_bike(moofings, bike_name) do
+    Lens.key(:bikes)
+      |> Lens.all()
+      |> Lens.map(moofings, fn bike -> %{bike |  current: (bike.name == bike_name)} end)
+  end
 
   @doc """
     Linear trend analysis by calculating the average of all deltas of the measurements in an year
@@ -116,7 +150,7 @@ defmodule VanMoofing do
   end
 
   defp linear_interpolate(acc, _, []), do: acc
-  defp linear_interpolate(acc, nil, [head| tail]), do: linear_interpolate(acc, head, tail)
+  # defp linear_interpolate(acc, nil, [head | tail]), do: linear_interpolate(acc, head, tail)
   defp linear_interpolate(acc, {prev_date, prev_value}, [{date, value} | tail]) do
     diff = diff_integer(prev_value, value) / diff_string_date(prev_date, date)
     linear_interpolate([diff | acc], {date, value}, tail)

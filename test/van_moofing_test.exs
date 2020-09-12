@@ -39,4 +39,14 @@ defmodule VanMoofingTest do
     assert 9603 == total
   end
 
+  test "set current bike", state do
+    updated = VanMoofing.update_current_bike(state[:moofings], "ffs_horse")
+    assert "ffs_horse" = VanMoofing.get_current_bike(updated).name
+  end
+
+  test "add new bike", state do
+    updated = VanMoofing.add_new_bike(state[:moofings], "new_bike")
+    assert 4 == length(updated.bikes)
+  end
+
 end
