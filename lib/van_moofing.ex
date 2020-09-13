@@ -6,7 +6,7 @@ defmodule VanMoofing do
   @model %Model.Bikes{bikes: [%Model.Bike{data: [%Model.Measurement{}]}]}
 
   def start(_type, _args) do
-		:ets.new(@ets_store, [:set, :public, :named_table])
+		:ets.new(@ets_store, [:set, :protected, :named_table])
 
     if !File.exists?(Path.expand(@store)), do: File.write(Path.expand(@store), "{}")
 

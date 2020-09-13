@@ -61,11 +61,12 @@ defmodule VanMoofing.CLI do
     aliases [:aa]
     description "Alias: aa\targs: [date] [km]\tAdds the current total nr of kilometers value at the specified date"
 
-    argument :date, type: :string, help: "The particular date a certain amounts of Km are cycled"
+    argument :date, type: :string, help: "The particular date formatted as YYYY-MM-DD a certain amounts of Km are cycled"
     argument :km, type: :integer, help: "Current Km's as shown in the bike/app"
 
     run context do
       VanMoofing.add(context[:date], context[:km])
+      IO.puts "Added #{context[:km]} on #{context[:date]}"
     end
   end
 
@@ -77,6 +78,7 @@ defmodule VanMoofing.CLI do
 
     run context do
       VanMoofing.add(get_date(), context[:km])
+      IO.puts "Added #{context[:km]} on #{get_date()}"
     end
   end
 
@@ -88,17 +90,19 @@ defmodule VanMoofing.CLI do
 
     run context do
       VanMoofing.save_goal(context[:goal])
+      IO.puts "Goal set to #{context[:goal]}"
     end
   end
 
   command :current do
     aliases [:c]
-    description "Alias: [c]\t\targs: [bike_name] \t\tSet's the current bike if it doesn't exist will create it"
+    description "Alias: c\t\targs: [bike_name]\tSet's the current bike if it doesn't exist will create it"
 
     argument :bike_name, type: :string, help: "The name you gave that bike"
 
     run context do
       VanMoofing.set_current_bike(context[:bike_name])
+      IO.puts "Current bike is now #{context[:bike_name]}"
     end
   end
 
