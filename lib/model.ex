@@ -15,7 +15,7 @@ defmodule Model do
     typedstruct do
       field :name, String.t()
       field :current, boolean()
-      field :data, list()
+      field :data, list(Measurement.t())
     end
   end
 

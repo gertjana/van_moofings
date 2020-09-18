@@ -17,7 +17,7 @@ defmodule VanMoofing do
     {:ok, self()}
   end
 
-  @spec load_from_file(binary) :: {:error, atom} | {:ok, %Model.Bikes{}}
+  @spec load_from_file(String.t()) :: {:error, atom} | {:ok, Model.Bikes.t()}
   def load_from_file(file) do
     with {:ok, body} <- File.read(Path.expand(file)),
          {:ok, moofings} <- Poison.decode(body, as: @model) do
@@ -32,7 +32,7 @@ defmodule VanMoofing do
     File.write(Path.expand(@store), json)
   end
 
-  @spec get_current_bike(%Model.Bikes{}) :: %Model.Bike{}
+  @spec get_current_bike(Model.Bikes.t()) :: Model.Bike.t()
   def get_current_bike(moofings) do
     Lens.key(:bikes)
       |> Lens.all()
@@ -41,29 +41,36 @@ defmodule VanMoofing do
       |> List.first()
   end
 
-  @spec filter_measurements_per_year(String.t, %Model.Bikes{}) :: [%Model.Measurement{}]
+  @spec get_current_bike_name(Model.Bikes.t()) :: String.t
+  def get_current_bike_name(moofings) do
+    get_current_bike(moofings).name
+  end
+
+  @spec filter_measurements_per_year(String.t(), Model.Bikes.t()) :: [Model.Measurement.t()]
   def filter_measurements_per_year(year, moofings) do
     get_current_bike(moofings).data
       |> Enum.filter(fn measurement -> measurement.date |> String.starts_with?(year) end)
   end
 
-  @spec list(String.t) :: [{String.t, integer}]
+  @spec list(binary) :: {binary, [{binary, integer}]}
   def list(year) do
     moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
-    filter_measurements_per_year(year, moofings)
+    current_bike_name = get_current_bike_name(moofings)
+    measurements = filter_measurements_per_year(year, moofings)
       |> Enum.map(fn m -> {m.date, m.km} end)
+    {current_bike_name, measurements}
   end
 
-  @spec add_value([%Model.Measurement{}], binary, integer) :: [%Model.Measurement{}]
+  @spec add_value(Model.Bikes.t(), String.t(), integer) :: Model.Bikes.t()
   def add_value(moofings, date, value) do
     Lens.key(:bikes)
       |> Lens.all()
       |> Lens.filter(fn b -> b.current==true end)
       |> Lens.key(:data)
-      |> Lens.map(moofings, fn d -> [%Model.Measurement{date: date, km: value} | d] end)
+      |> Lens.map(moofings, fn data -> [%Model.Measurement{date: date, km: value} | data] end)
   end
 
-  @spec add(binary, integer) :: :ok | {:error, atom}
+  @spec add(String.t(), integer) :: :ok | {:error, atom}
   def add(date, value) do
     moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
     add_value(moofings, date, value)
@@ -78,7 +85,7 @@ defmodule VanMoofing do
       |> save_to_file
   end
 
-  @spec get_total_other_bikes( %Model.Bikes{}) :: integer
+  @spec get_total_other_bikes(Model.Bikes.t()) :: integer
   def get_total_other_bikes(moofings) do
     Lens.key(:bikes)
       |> Lens.all()
@@ -97,12 +104,13 @@ defmodule VanMoofing do
       |> length() > 0
   end
 
-  @spec set_current_bike(String.t) :: :ok | {:error, atom}
+  @spec set_current_bike(String.t()) :: :ok | {:error, atom}
   def set_current_bike(bike_name) do
     moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
-    case bike_exists?(moofings, bike_name) do
-      false -> add_new_bike(moofings, bike_name)
-      true -> moofings
+    if bike_exists?(moofings, bike_name) do
+      moofings
+    else
+      add_new_bike(moofings, bike_name)
     end
       |> update_current_bike(bike_name)
       |> save_to_file
@@ -119,34 +127,35 @@ defmodule VanMoofing do
   def update_current_bike(moofings, bike_name) do
     Lens.key(:bikes)
       |> Lens.all()
-      |> Lens.map(moofings, fn bike -> %{bike |  current: (bike.name == bike_name)} end)
+      |> Lens.map(moofings, fn bike -> %{bike | current: (bike.name == bike_name)} end)
   end
 
   @doc """
     Linear trend analysis by calculating the average of all deltas of the measurements in an year
     and then extrapolate for the last day of the year
   """
-  @spec trend_eoy(String.t) :: {float, integer, float, float,float, float}
+  @spec trend_eoy(String.t()) :: {float, integer, float, float,float, float, binary}
   def trend_eoy(year) do
     moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
     offset = get_total_other_bikes(moofings)
-    trend(list(year), "#{year}-12-31", moofings.goal, offset)
+    {current_bike_name, list} = list(year)
+    trend(list, "#{year}-12-31", moofings.goal, offset, current_bike_name)
   end
 
-  @spec trend([{String.t, integer}], String.t, integer, integer) :: {float, integer, float, float, float, float}
-  defp trend(moofings, new_date, goal, offset) do
+  @spec trend([{binary, integer}], binary, integer, integer, binary) :: {float, integer, float, float, float, float,binary}
+  defp trend(moofings, new_date, goal, offset, current_bike_name) do
     {last_date, last_value} = List.last(moofings)
     [h | t] = moofings
-    acc = linear_interpolate([],h, t)
-    case acc do
-      [] -> 0
+    deltas = linear_interpolate([],h, t)
+    case deltas do
+      [] -> {0, 0, 0, 0, 0, 0, current_bike_name}
       _ ->
-        avg = Enum.sum(acc) / Enum.count(acc)
+        avg = Enum.sum(deltas) / Enum.count(deltas)
         days = diff_string_date(last_date, new_date)
         avg_goal = (goal - last_value) / days
         total = Float.round(avg * days + last_value)+offset
         this_year = Float.round(avg * days + last_value - elem(h, 1))
-        {avg, days, total, this_year, goal, avg_goal}
+        {avg, days, total, this_year, goal, avg_goal, current_bike_name}
     end
   end
 

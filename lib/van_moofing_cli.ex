@@ -33,7 +33,8 @@ defmodule VanMoofing.CLI do
 
     run context do
       year = context[:year]
-      {avg, days, total, this_year, goal, avg_goal} = VanMoofing.trend_eoy(year)
+      {avg, days, total, this_year, goal, avg_goal, current_bike_name} = VanMoofing.trend_eoy(year)
+      IO.puts "Currently riding #{current_bike_name}"
       IO.puts "With a average of #{Number.Delimit.number_to_delimited(avg)} km a day and #{days} days till the end of the year, "
       IO.puts "you will probably cycle : #{this_year} km in #{year} for a grand total of #{total} km"
       case {total, goal} do
@@ -51,9 +52,11 @@ defmodule VanMoofing.CLI do
     argument :year, type: :integer, help: "[year] The year to list"
 
     run context do
-      IO.puts "Date      \tKm's cycled"
       year = context[:year] |> Integer.to_string
-      VanMoofing.list(year) |> Enum.each(fn vm -> pr(vm) end)
+      {current_bike_name, measurements} = VanMoofing.list(year)
+      IO.puts "Currently riding #{current_bike_name}"
+      IO.puts "Date      \tKm's cycled"
+      measurements |> Enum.each(fn vm -> pr(vm) end)
     end
   end
 
