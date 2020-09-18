@@ -67,7 +67,8 @@ defmodule VanMoofing do
       |> Lens.all()
       |> Lens.filter(fn b -> b.current==true end)
       |> Lens.key(:data)
-      |> Lens.map(moofings, fn data -> [%Model.Measurement{date: date, km: value} | data] end)
+      |> Lens.front()
+      |> Lens.put(moofings, %Model.Measurement{date: date, km: value})
   end
 
   @spec add(String.t(), integer) :: :ok | {:error, atom}
@@ -81,7 +82,7 @@ defmodule VanMoofing do
   def save_goal(goal) do
     moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
     Lens.key(:goal)
-      |> Lens.map(moofings, fn _ -> goal end)
+      |> Lens.put(moofings, goal)
       |> save_to_file
   end
 
@@ -120,7 +121,7 @@ defmodule VanMoofing do
   def add_new_bike(moofings, bike_name) do
     Lens.key(:bikes)
       |> Lens.front
-      |> Lens.map(moofings, fn nil -> %Model.Bike{name: bike_name, data: []} end)
+      |> Lens.put(moofings, %Model.Bike{name: bike_name, data: []})
   end
 
   @spec update_current_bike(%Model.Bikes{}, String.t) :: %Model.Bikes{}
