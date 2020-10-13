@@ -28,4 +28,5 @@ van_moofing
 
 .formatter.exs
 
-
+.vscode/
+.metals/

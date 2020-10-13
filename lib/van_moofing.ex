@@ -131,6 +131,16 @@ defmodule VanMoofing do
       |> Lens.map(moofings, fn bike -> %{bike | current: (bike.name == bike_name)} end)
   end
 
+  def list_all do
+    moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
+    Lens.key(:bikes)
+      |> Lens.all()
+      |> Lens.multiple([Lens.key(:name), Lens.key(:data), Lens.key(:current)])
+      |> Lens.to_list(moofings)
+      |> Enum.chunk_every(3)
+      |> Map.new(fn [k,[h|_], c] -> {k,{h.km, c}} end)
+  end
+
   @doc """
     Linear trend analysis by calculating the average of all deltas of the measurements in an year
     and then extrapolate for the last day of the year
@@ -153,7 +163,7 @@ defmodule VanMoofing do
       _ ->
         avg = Enum.sum(deltas) / Enum.count(deltas)
         days = diff_string_date(last_date, new_date)
-        avg_goal = (goal - last_value) / days
+        avg_goal = (goal - offset - last_value) / days
         total = Float.round(avg * days + last_value)+offset
         this_year = Float.round(avg * days + last_value - elem(h, 1))
         {avg, days, total, this_year, goal, avg_goal, current_bike_name}

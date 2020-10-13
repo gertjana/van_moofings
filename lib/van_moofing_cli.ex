@@ -109,6 +109,25 @@ defmodule VanMoofing.CLI do
     end
   end
 
+  command :listall do
+    aliases [:la]
+    description "Alias: la\t\t List the total km's cycled for all bikes"
+
+    run _context do
+      bikes = VanMoofing.list_all()
+      bikes
+        |> Enum.each(fn {b, {km, c}} ->
+          case c do
+            true -> IO.puts("#{b} (riding)\t#{km} km")
+            false -> IO.puts("#{b}\t\t#{km} km")
+          end
+        end)
+        total = bikes |> Enum.reduce(0, fn {_, {km, _}}, acc -> acc + km end)
+        IO.puts "Total\t\t\t#{total} km"
+      end
+  end
+  #Enum.reduce([1, 2, 3], 0, fn x, acc -> x + acc end)
+
   defp get_date(), do: Date.utc_today |> Date.to_iso8601
 
   defp pr(moofing) do
