@@ -1,11 +1,23 @@
 image: elixir:latest
 
+stages:
+  - test
+  - build
+
+
 before_script:
   - mix local.rebar --force
   - mix local.hex --force
   - mix deps.get
 
-mix:
+test:
+  stage: test
   script:
-    - mix test
+    - MIX_ENV=test mix test
     
+build:
+  stage: build
+  script:
+    - MIX_ENV=prod mix escript.build
+
+
