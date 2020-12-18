@@ -126,7 +126,16 @@ defmodule VanMoofing.CLI do
         IO.puts "Total\t\t\t#{total} km"
       end
   end
-  #Enum.reduce([1, 2, 3], 0, fn x, acc -> x + acc end)
+
+  command :exportall do
+    aliases [:ea]
+    description "Alias: ea\t\t Export all data as csv"
+
+    run _context do
+      VanMoofing.export_all()
+    end
+  end
+
 
   defp get_date(), do: Date.utc_today |> Date.to_iso8601
 

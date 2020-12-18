@@ -141,6 +141,12 @@ defmodule VanMoofing do
       |> Map.new(fn [k,[h|_], c] -> {k,{h.km, c}} end)
   end
 
+  def export_all do
+    moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
+
+  end
+
+
   @doc """
     Linear trend analysis by calculating the average of all deltas of the measurements in an year
     and then extrapolate for the last day of the year
