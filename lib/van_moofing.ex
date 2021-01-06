@@ -1,4 +1,5 @@
 defmodule VanMoofing do
+  @moduledoc false
   use Number
 
   @store "~/.vanmoofing.json"
@@ -6,7 +7,7 @@ defmodule VanMoofing do
   @model %Model.Bikes{bikes: [%Model.Bike{data: [%Model.Measurement{}]}]}
 
   def start(_type, _args) do
-		:ets.new(@ets_store, [:set, :protected, :named_table])
+    :ets.new(@ets_store, [:set, :protected, :named_table])
 
     if !File.exists?(Path.expand(@store)), do: File.write(Path.expand(@store), "{}")
 
@@ -36,7 +37,7 @@ defmodule VanMoofing do
   def get_current_bike(moofings) do
     Lens.key(:bikes)
       |> Lens.all()
-      |> Lens.filter(fn b -> b.current==true end)
+      |> Lens.filter(fn b -> b.current == true end)
       |> Lens.to_list(moofings)
       |> List.first()
   end
@@ -65,7 +66,7 @@ defmodule VanMoofing do
   def add_value(moofings, date, value) do
     Lens.key(:bikes)
       |> Lens.all()
-      |> Lens.filter(fn b -> b.current==true end)
+      |> Lens.filter(fn b -> b.current == true end)
       |> Lens.key(:data)
       |> Lens.front()
       |> Lens.put(moofings, %Model.Measurement{date: date, km: value})
@@ -90,7 +91,7 @@ defmodule VanMoofing do
   def get_total_other_bikes(moofings) do
     Lens.key(:bikes)
       |> Lens.all()
-      |> Lens.filter(fn b -> b.current==false end)
+      |> Lens.filter(fn b -> b.current == false end)
       |> Lens.key(:data)
       |> Lens.to_list(moofings)
       |> Enum.map(fn [h|_] -> h.km end)
@@ -138,39 +139,43 @@ defmodule VanMoofing do
       |> Lens.multiple([Lens.key(:name), Lens.key(:data), Lens.key(:current)])
       |> Lens.to_list(moofings)
       |> Enum.chunk_every(3)
-      |> Map.new(fn [k,[h|_], c] -> {k,{h.km, c}} end)
+      |> Map.new(fn [b, [h|_], c] -> {b, {h.km, c}} end)
   end
 
   def export_all do
     moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
-
+    Lens.key(:bikes)
+      |> Lens.all()
+      |> Lens.multiple([Lens.key(:name), Lens.key(:data), Lens.key(:current)])
+      |> Lens.to_list(moofings)
+      |> Enum.chunk_every(3)
   end
-
 
   @doc """
     Linear trend analysis by calculating the average of all deltas of the measurements in an year
     and then extrapolate for the last day of the year
   """
-  @spec trend_eoy(String.t()) :: {float, integer, float, float,float, float, binary}
+  @spec trend_eoy(String.t()) :: {number, integer, number, number, number, number, binary}
   def trend_eoy(year) do
     moofings = :ets.lookup(@ets_store, :moofings)[:moofings]
     offset = get_total_other_bikes(moofings)
-    {current_bike_name, list} = list(year)
-    trend(list, "#{year}-12-31", moofings.goal, offset, current_bike_name)
+    {current_bike_name, kms} = list(year)
+    trend(kms, "#{year}-12-31", moofings.goal, offset, current_bike_name)
   end
 
-  @spec trend([{binary, integer}], binary, integer, integer, binary) :: {float, integer, float, float, float, float,binary}
+  @spec trend([{binary, integer}], binary, integer, integer, binary)
+          :: {number, integer, number, number, number, number, binary}
   defp trend(moofings, new_date, goal, offset, current_bike_name) do
     {last_date, last_value} = List.last(moofings)
     [h | t] = moofings
-    deltas = linear_interpolate([],h, t)
+    deltas = linear_interpolate([], h, t)
     case deltas do
       [] -> {0, 0, 0, 0, 0, 0, current_bike_name}
       _ ->
         avg = Enum.sum(deltas) / Enum.count(deltas)
         days = diff_string_date(last_date, new_date)
         avg_goal = (goal - offset - last_value) / days
-        total = Float.round(avg * days + last_value)+offset
+        total = Float.round(avg * days + last_value) + offset
         this_year = Float.round(avg * days + last_value - elem(h, 1))
         {avg, days, total, this_year, goal, avg_goal, current_bike_name}
     end
@@ -183,5 +188,5 @@ defmodule VanMoofing do
   end
 
   defp diff_string_date(d1, d2), do: Date.diff(Date.from_iso8601!(d2), Date.from_iso8601!(d1))
-  defp diff_integer(v1,v2), do: v2-v1
+  defp diff_integer(v1, v2), do: v2 - v1
 end

@@ -25,7 +25,8 @@ defmodule VanMoofing.MixProject do
       {:poison, "~> 3.1"},
       {:number, "~> 1.0.1"},
       {:typed_struct, "~> 0.2.1"},
-      {:lens, "~> 1.0.0"}
+      {:lens, "~> 1.0.0"},
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false}
     ]
   end
 end

@@ -1,6 +1,8 @@
 defmodule Model do
+  @moduledoc false
 
   defmodule Bikes do
+    @moduledoc false
     use TypedStruct
 
     typedstruct do
@@ -10,6 +12,7 @@ defmodule Model do
   end
 
   defmodule Bike do
+    @moduledoc false
     use TypedStruct
 
     typedstruct do
@@ -20,6 +23,7 @@ defmodule Model do
   end
 
   defmodule Measurement do
+    @moduledoc false
     use TypedStruct
 
     typedstruct do

@@ -16,11 +16,11 @@ defmodule VanMoofing.CLI do
 
     run context do
       year = context[:year]
-      IO.puts "\"date\", \"km\", \"trend\""
-      VanMoofing.list(year)
-        |> Enum.each(fn {k, v} -> IO.puts("\"#{k}\", #{v}, #{v}") end)
-      {_, _, total, _, _, _} = VanMoofing.trend_eoy(year)
-      IO.puts("\"#{year}-12-31\", , #{total}")
+      IO.puts ~s("date", "km", "trend")
+      {_current_bike, kms} = VanMoofing.list(year)
+      kms |> Enum.each(fn {k, v} -> IO.puts(~s("#{k}", #{v}, #{v})) end)
+      {_, _, total, _, _, _, _} = VanMoofing.trend_eoy(year)
+      IO.puts ~s("#{year}-12-31", , #{total})
     end
   end
 
@@ -133,13 +133,17 @@ defmodule VanMoofing.CLI do
 
     run _context do
       VanMoofing.export_all()
+        |> Enum.each(fn [b, d, c] ->
+          r = if c, do: " (riding)", else: ""
+          IO.puts ~s("#{b}#{r}", "date", "km")
+          d |> Enum.each(fn m -> IO.puts ~s("", "#{m.date}", "#{m.km} km) end)
+        end)
     end
   end
 
-
-  defp get_date(), do: Date.utc_today |> Date.to_iso8601
+  defp get_date, do: Date.utc_today |> Date.to_iso8601
 
   defp pr(moofing) do
-    with {k,v} <- moofing, do: IO.puts "#{k}\t#{v} km"
+    with {k, v} <- moofing, do: IO.puts "#{k}\t#{v} km"
   end
 end
