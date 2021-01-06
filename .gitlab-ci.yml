@@ -15,6 +15,11 @@ test:
   script:
     - MIX_ENV=test mix test
     
+lint:
+  stage: test
+  script:
+    - MIX_ENV=test mix credo --strict
+
 build:
   stage: build
   script:
