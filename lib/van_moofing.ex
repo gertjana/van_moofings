@@ -59,6 +59,7 @@ defmodule VanMoofing do
     current_bike_name = get_current_bike_name(moofings)
     measurements = filter_measurements_per_year(year, moofings)
       |> Enum.map(fn m -> {m.date, m.km} end)
+    IO.puts inspect(measurements)
     {current_bike_name, measurements}
   end
 
@@ -166,7 +167,7 @@ defmodule VanMoofing do
   @spec trend([{binary, integer}], binary, integer, integer, binary)
           :: {number, integer, number, number, number, number, binary}
   defp trend(moofings, new_date, goal, offset, current_bike_name) do
-    {last_date, last_value} = List.last(moofings)
+    {last_date, last_value} = List.first(moofings)
     [h | t] = moofings
     deltas = linear_interpolate([], h, t)
     case deltas do
